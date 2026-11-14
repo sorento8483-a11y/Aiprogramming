@@ -477,6 +477,7 @@
                     <!-- Review items will be generated here -->
                 </div>
 
+                <button id="submitToFirebaseBtn" class="btn" style="background: linear-gradient(to right, #FFD54F 0%, #FFB300 100%); box-shadow: 0 8px 15px rgba(255, 179, 0, 0.4); margin-bottom: 10px;" onclick="submitResultToTeacher()">📤 선생님께 결과 제출하기</button>
                 <button class="btn" style="background: linear-gradient(to right, #84E184 0%, #A5D6A7 100%); box-shadow: 0 8px 15px rgba(132, 225, 132, 0.4); margin-bottom: 10px;" onclick="downloadResults()">💾 결과 문서 다운로드 (.txt)</button>
                 <button class="btn" style="background: linear-gradient(to right, #ff9a9e 0%, #fecfef 100%); box-shadow: 0 8px 15px rgba(255, 154, 158, 0.4);" onclick="resetApp()">🏠 처음으로 돌아가기</button>
             </div>
@@ -954,9 +955,14 @@
                     reviewContainer.appendChild(reviewDiv);
                 });
 
-                // Firebase에 결과 데이터 저장 함수 호출
-                if (window.saveQuizResult) {
-                    window.saveQuizResult(grade, classNum, studentNum, name, score, userHistory);
+                // 제출 버튼 초기화 (다시 풀었을 때를 대비)
+                const submitBtn = document.getElementById('submitToFirebaseBtn');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = '📤 선생님께 결과 제출하기';
+                    submitBtn.style.background = 'linear-gradient(to right, #FFD54F 0%, #FFB300 100%)';
+                    submitBtn.style.boxShadow = '0 8px 15px rgba(255, 179, 0, 0.4)';
+                    submitBtn.style.color = 'white';
                 }
 
             }, 300); // slight delay for visual transition
@@ -1025,6 +1031,27 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             }, 0);
+        }
+
+        // Firebase에 결과를 수동으로 제출하는 함수
+        function submitResultToTeacher() {
+            const grade = document.getElementById('grade').value;
+            const classNum = document.getElementById('classNum').value;
+            const studentNum = document.getElementById('studentNum').value;
+            const name = document.getElementById('studentName').value;
+
+            if (window.saveQuizResult) {
+                // Firebase 저장 함수 호출
+                window.saveQuizResult(grade, classNum, studentNum, name, score, userHistory);
+                
+                // 버튼 상태 변경 (중복 제출 방지 및 시각적 피드백)
+                const btn = document.getElementById('submitToFirebaseBtn');
+                btn.disabled = true;
+                btn.innerText = '✅ 선생님께 제출 완료!';
+                btn.style.background = 'linear-gradient(to right, #E0E0E0 0%, #BDBDBD 100%)';
+                btn.style.boxShadow = 'none';
+                btn.style.color = '#333';
+            }
         }
     </script>
 
