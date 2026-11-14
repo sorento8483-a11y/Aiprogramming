@@ -477,6 +477,7 @@
                     <!-- Review items will be generated here -->
                 </div>
 
+                <button id="submitToFirebaseBtn" class="btn" style="background: linear-gradient(to right, #FFD54F 0%, #FFB300 100%); box-shadow: 0 8px 15px rgba(255, 179, 0, 0.4); margin-bottom: 10px;" onclick="submitResultToTeacher()">📤 선생님께 결과 제출하기</button>
                 <button class="btn" style="background: linear-gradient(to right, #84E184 0%, #A5D6A7 100%); box-shadow: 0 8px 15px rgba(132, 225, 132, 0.4); margin-bottom: 10px;" onclick="downloadResults()">💾 결과 문서 다운로드 (.txt)</button>
                 <button class="btn" style="background: linear-gradient(to right, #ff9a9e 0%, #fecfef 100%); box-shadow: 0 8px 15px rgba(255, 154, 158, 0.4);" onclick="resetApp()">🏠 처음으로 돌아가기</button>
             </div>
@@ -922,6 +923,12 @@
                 document.getElementById('resultMessage').innerText = msg;
                 document.getElementById('resultDetail').innerText = `${totalQuestions}문제 중 ${score/10}문제를 맞혔습니다.`;
                 
+                // 학생 정보를 가져옵니다.
+                const grade = document.getElementById('grade').value;
+                const classNum = document.getElementById('classNum').value;
+                const studentNum = document.getElementById('studentNum').value;
+                const name = document.getElementById('studentName').value;
+
                 // 오답 풀이 (Review List) 생성
                 const reviewContainer = document.getElementById('reviewList');
                 reviewContainer.innerHTML = '<h3>📝 오답 풀이 확인하기</h3>';
@@ -947,6 +954,16 @@
                     `;
                     reviewContainer.appendChild(reviewDiv);
                 });
+
+                // 제출 버튼 초기화 (다시 풀었을 때를 대비)
+                const submitBtn = document.getElementById('submitToFirebaseBtn');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = '📤 선생님께 결과 제출하기';
+                    submitBtn.style.background = 'linear-gradient(to right, #FFD54F 0%, #FFB300 100%)';
+                    submitBtn.style.boxShadow = '0 8px 15px rgba(255, 179, 0, 0.4)';
+                    submitBtn.style.color = 'white';
+                }
 
             }, 300); // slight delay for visual transition
         }
@@ -1015,6 +1032,76 @@
                 URL.revokeObjectURL(url);
             }, 0);
         }
+
+        // Firebase에 결과를 수동으로 제출하는 함수
+        function submitResultToTeacher() {
+            const grade = document.getElementById('grade').value;
+            const classNum = document.getElementById('classNum').value;
+            const studentNum = document.getElementById('studentNum').value;
+            const name = document.getElementById('studentName').value;
+
+            if (window.saveQuizResult) {
+                // Firebase 저장 함수 호출
+                window.saveQuizResult(grade, classNum, studentNum, name, score, userHistory);
+                
+                // 버튼 상태 변경 (중복 제출 방지 및 시각적 피드백)
+                const btn = document.getElementById('submitToFirebaseBtn');
+                btn.disabled = true;
+                btn.innerText = '✅ 선생님께 제출 완료!';
+                btn.style.background = 'linear-gradient(to right, #E0E0E0 0%, #BDBDBD 100%)';
+                btn.style.boxShadow = 'none';
+                btn.style.color = '#333';
+            }
+        }
+    </script>
+
+    <!-- Firebase 연동 스크립트 (모듈 방식) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 제공해주신 Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyDjz6aiDek_Nk-NYhIDrtt5aW9fbEMTK_g",
+            authDomain: "worksheet-763de.firebaseapp.com",
+            projectId: "worksheet-763de",
+            storageBucket: "worksheet-763de.firebasestorage.app",
+            messagingSenderId: "414033551588",
+            appId: "1:414033551588:web:061d684078e4f2e23f0cf1",
+            measurementId: "G-S2NMM3DD1R"
+        };
+
+        // Firebase 초기화
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 결과 저장 함수를 전역 window 객체에 등록하여 기존 스크립트에서 호출할 수 있도록 함
+        window.saveQuizResult = async function(grade, classNum, studentNum, name, score, history) {
+            try {
+                const unitSelect = document.getElementById('unitSelect');
+                const diffSelect = document.getElementById('difficultySelect');
+                
+                const unitText = unitSelect.options[unitSelect.selectedIndex].text;
+                const diffText = diffSelect.options[diffSelect.selectedIndex].text;
+                
+                // 'quiz_results' 컬렉션에 데이터 추가
+                await addDoc(collection(db, "quiz_results"), {
+                    grade: grade,
+                    classNum: classNum,
+                    studentNum: studentNum,
+                    studentName: name,
+                    unit: unitText,
+                    difficulty: diffText,
+                    score: score,
+                    history: history, // 어떤 문제를 맞히고 틀렸는지에 대한 배열 데이터
+                    timestamp: serverTimestamp()
+                });
+                
+                console.log("Firebase에 데이터가 성공적으로 저장되었습니다!");
+            } catch (error) {
+                console.error("데이터 저장 중 오류 발생: ", error);
+            }
+        };
     </script>
 </body>
 </html>
