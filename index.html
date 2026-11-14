@@ -922,6 +922,12 @@
                 document.getElementById('resultMessage').innerText = msg;
                 document.getElementById('resultDetail').innerText = `${totalQuestions}문제 중 ${score/10}문제를 맞혔습니다.`;
                 
+                // 학생 정보를 가져옵니다.
+                const grade = document.getElementById('grade').value;
+                const classNum = document.getElementById('classNum').value;
+                const studentNum = document.getElementById('studentNum').value;
+                const name = document.getElementById('studentName').value;
+
                 // 오답 풀이 (Review List) 생성
                 const reviewContainer = document.getElementById('reviewList');
                 reviewContainer.innerHTML = '<h3>📝 오답 풀이 확인하기</h3>';
@@ -947,6 +953,11 @@
                     `;
                     reviewContainer.appendChild(reviewDiv);
                 });
+
+                // Firebase에 결과 데이터 저장 함수 호출
+                if (window.saveQuizResult) {
+                    window.saveQuizResult(grade, classNum, studentNum, name, score, userHistory);
+                }
 
             }, 300); // slight delay for visual transition
         }
@@ -1015,6 +1026,55 @@
                 URL.revokeObjectURL(url);
             }, 0);
         }
+    </script>
+
+    <!-- Firebase 연동 스크립트 (모듈 방식) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 제공해주신 Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyDjz6aiDek_Nk-NYhIDrtt5aW9fbEMTK_g",
+            authDomain: "worksheet-763de.firebaseapp.com",
+            projectId: "worksheet-763de",
+            storageBucket: "worksheet-763de.firebasestorage.app",
+            messagingSenderId: "414033551588",
+            appId: "1:414033551588:web:061d684078e4f2e23f0cf1",
+            measurementId: "G-S2NMM3DD1R"
+        };
+
+        // Firebase 초기화
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 결과 저장 함수를 전역 window 객체에 등록하여 기존 스크립트에서 호출할 수 있도록 함
+        window.saveQuizResult = async function(grade, classNum, studentNum, name, score, history) {
+            try {
+                const unitSelect = document.getElementById('unitSelect');
+                const diffSelect = document.getElementById('difficultySelect');
+                
+                const unitText = unitSelect.options[unitSelect.selectedIndex].text;
+                const diffText = diffSelect.options[diffSelect.selectedIndex].text;
+                
+                // 'quiz_results' 컬렉션에 데이터 추가
+                await addDoc(collection(db, "quiz_results"), {
+                    grade: grade,
+                    classNum: classNum,
+                    studentNum: studentNum,
+                    studentName: name,
+                    unit: unitText,
+                    difficulty: diffText,
+                    score: score,
+                    history: history, // 어떤 문제를 맞히고 틀렸는지에 대한 배열 데이터
+                    timestamp: serverTimestamp()
+                });
+                
+                console.log("Firebase에 데이터가 성공적으로 저장되었습니다!");
+            } catch (error) {
+                console.error("데이터 저장 중 오류 발생: ", error);
+            }
+        };
     </script>
 </body>
 </html>
